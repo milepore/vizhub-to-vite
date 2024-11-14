@@ -142,3 +142,76 @@ Now, we can use `ref.current` to be able to access the SVG via D3, and update it
         svg.selectAll('circle').data([null]).join('circle').attr('cx', 450).attr('cy', 250).attr('r', 50).attr('fill','red')
     }, []);
 ```
+
+You'll see that the second parameter to useEffect is an empty array - that is the set of parameters that this useEffect depends on.  If any of those parameters change, the useEffect hook will get re-rendered.  This will come in handy later.
+
+### Loading Data
+
+The other thing that VizHub makes really easy for us is loading data.  The simple line
+
+```javascript
+import data from './data.csv';
+```
+
+Can do a whole bunch of work for us to load a dataset.  Instead, we are going to load our dataset from a URL (which is also hosted locally).  But we have to wait for that to be loaded before we go do our rendering.
+
+We can put files in the ```public/``` directory of our vite application, and the are available from the same directory as our application.
+
+As you can see we have added a file (iris.csv) to our public/ directory.  Now lets add some code to load it.  Because we are doing things asynchronously, we need to load our data, and then update our CSV.  In order to do that, we're going to store the data in some React state.
+
+To do this, we will leverage React's ```useState()``` method:
+
+```javascript
+    const [ data, setData ] = useState(null)
+    if (data == null) {
+        d3.csv("iris.csv").then(function (csvData) {
+            setData(csvData);
+        });
+    }
+```
+
+And since we're now setting the data, we can use it in our rendering, by telling useEffect that we depend on data.
+
+```javascript
+    useEffect( () => {
+        const svg = d3.select(ref.current)
+        var [x,y]=[0,0];
+        if (data != null)
+            svg.selectAll('circle').data(data).join('circle').attr('cx', () => x+=25).attr('cy', () => y+=25).attr('r', 25).attr('fill','red')
+    }, []);
+```
+
+But wait, that doesn't render anything!  Oh - we have to tell useEffect that we want to re-render anytime ```data``` changes:
+
+```javascript
+    useEffect( () => {
+        const svg = d3.select(ref.current)
+        var [x,y]=[0,0];
+        if (data != null)
+            svg.selectAll('circle').data(data).join('circle').attr('cx', () => x+=25).attr('cy', () => y+=25).attr('r', 25).attr('fill','red')
+    }, [data]);
+```
+
+You will now see some circles in a diagonal line moving down the screen.  Great!  We are retriving data, and using S3 to use it.
+
+Of course we know from watching @curran that we need to process our data to make it numeric (just like in @curran/iris-dataset), so let's change our data processing to:
+
+```javascript
+    const processData = (data) => {
+        for (const d of data) {
+            d.petal_length = +d.petal_length;
+            d.petal_width = +d.petal_width;
+            d.sepal_length = +d.sepal_length;
+            d.sepal_width = +d.sepal_width;
+        }
+        return newData;
+    }
+
+    const [ data, setData ] = useState(null)
+    if (data == null) {
+        d3.csv("iris.csv").then(function (csvData) {
+            const processedData=processData(csvData, categoryData)
+            setData(processedData);
+        });
+    }
+```

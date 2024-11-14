@@ -215,3 +215,93 @@ Of course we know from watching @curran that we need to process our data to make
         });
     }
 ```
+
+## Let's Bring in our VizHub
+
+So now we should be able to start rendering a bunch of our stuff.  Let's bring over a few javascript modules from VizHub and see if we can use them:
+
+* scatterPlot.js
+* colorLegend.js
+* axes.js
+
+We'll need to update our Viz.js to have the logic that used to be in index.js.
+
+First, lets import scatterPlot:
+
+```javascript
+import { scatterPlot } from "./scatterPlot.js"
+```
+
+Then we can update our useEffect block to call the same logic as we had in our index:
+
+```javascript
+    const [ hoveredValue, setHoveredValue ] = useState(null)
+    useEffect( () => {
+        const svg = d3.select(ref.current)
+        if (data === null)
+            return;
+        
+        svg.call(scatterPlot, {
+            data,
+            width,
+            height,
+            xValue: (d) => d.sepal_length,
+            yValue: (d) => d.petal_length,
+            colorValue: (d) => d.species,
+            xAxisLabel: 'Sepal Length',
+            yAxisLabel: 'Petal Length',
+            colorLegendLabel: 'Species',
+            margin: {
+              top: 10,
+              right: 10,
+              bottom: 50,
+              left: 50,
+            },
+            colorLegendX: 850,
+            colorLegendY: 320,
+            setHoveredValue,
+            hoveredValue,
+          });
+    }, [data]);
+  ```
+
+You'll notice that we needed a value for hoveredValue and setHoveredValue - so we created those with useState.  But for some reason, we aren't updating when we mouse into the various legends.
+
+That is because useEffect only re-renders when a depenency changes, so let's add ```hoveredValue``` to the depenency list.
+
+We now look like this:
+
+```javascript
+    const [ hoveredValue, setHoveredValue ] = useState(null)
+    useEffect( () => {
+        const svg = d3.select(ref.current)
+        if (data === null)
+            return;
+
+        svg.call(scatterPlot, {
+            data,
+            width,
+            height,
+            xValue: (d) => d.sepal_length,
+            yValue: (d) => d.petal_length,
+            colorValue: (d) => d.species,
+            xAxisLabel: 'Sepal Length',
+            yAxisLabel: 'Petal Length',
+            colorLegendLabel: 'Species',
+            margin: {
+              top: 10,
+              right: 10,
+              bottom: 50,
+              left: 50,
+            },
+            colorLegendX: 850,
+            colorLegendY: 320,
+            setHoveredValue,
+            hoveredValue,
+          });
+    }, [data, hoveredValue]);
+```
+
+And it works!
+
+The only thing, is that our Viz is the wrong size for the window.  Let's add some logic to handle the resize!

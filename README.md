@@ -61,4 +61,84 @@ TODO: insert browser image
 
 Ok.  Now we’re getting somewhere.  We have an app, and we can run it.
 
-Getting D3 integrated
+## Getting D3 integrated
+
+Now it is time to get D3 installed and get an SVG we can use with D3.  We are first going to install D3, so from the command line, run:
+
+```console
+# npm install d3
+```
+
+This will install the d3 library for us.  You can see that our package.json has the following added line:
+
+```json
+  "dependencies": {
+    // …
+    "d3": "^7.9.0",
+    //…
+  }
+```
+
+This will let us access the D3 libraries now.
+
+Next, we need to update our application and create a component that will house our Visualization.  We are going to make a new React component - we will call it "Viz" that will create the SVG, load our data, and invoke any D3 calls we have on it.
+
+So lets create a new file src/Viz.jsx:
+
+```javascript
+import { useRef } from "react";
+
+
+const Viz = () => {
+    const width=900;
+    const height=500;
+
+    return <svg width={width} height={height} id="viz"/>;
+};
+
+export default Viz;
+```
+
+And let's include it in our application - replacing App.jsx with:
+
+```javascript
+import Viz from './Viz'
+
+function App() {
+  return <Viz></Viz>;
+}
+
+export default App
+```
+
+If we go back to our application, we're going to see a blank screen, but using our dev tools, we can see that we have a single SVG element on the page now - with a width and height of 900 x 500.
+
+### Let's add some D3 calls
+
+First, we need to reference our SVG.  In order to use D3, we need to have 2 things:
+
+1) We need to be able to reference our SVG component
+2) We need to be able to call D3 code to manipulate that component after it exists
+
+In order to accomplish #1, we will use react's useRef.  That will let us get a javascript reference to a given component that is unique.  We are also going to do all of our D3 work inside a ```useEffect()``` block - which will allow us to run it after the initial draw, and set depenencies on how often it gets rendered.
+
+At the beginning of our Viz method, we will add:
+
+```javascript
+    const ref=useRef();
+```
+
+And change our SVG render to reference that:
+
+```javascript
+    return <svg width={width} height={height} id="viz" ref={ref} />;
+```
+
+Now, we can use `ref.current` to be able to access the SVG via D3, and update it:
+
+```javascript
+    useEffect( () => {
+        const svg = d3.select(ref.current)
+        svg.selectAll('circle').data([null]).join('circle').attr('cx', 450).attr('cy', 250).attr('r', 50).attr('fill','red')
+    }, []);
+```

@@ -1,3 +1,5 @@
+// copied directly from https://vizhub.com/curran/a446f43c024a49608f7ae418cde946a2?edit=files&file=colorLegend.js
+
 export const colorLegend = (
     selection,
     {

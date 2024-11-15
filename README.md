@@ -1,9 +1,11 @@
 
-# Moving from VizHub to Vite and GitHub Pages 
+# Moving from VizHub to Vite and GitHub Pages
 
 For one of my visualization projects, it became evident that using D3 for visualization wasn’t enough on its own.  I wanted to add a bunch of interactive filtering and chart settings - and the best tool for the job was a REACT app with a D3 enabled SVG embedded in it.
 
-It wasn’t totally straight forward, and I found info in a bunch of different places, and there were a few challenges understanding how to hook things together.  I figured putting that all in one place made sense.  I want to credit some of the references though:
+It wasn’t totally straight forward, and I found info in a bunch of different places, and there were a few challenges understanding how to hook things together.  I figured putting that all in one place made sense.  The steps in this page, and the code here works as of November 15th 2024.  
+
+Before we start, let me credit some fo the sites I referenced to build this:
 
 * [https://www.influxdata.com/blog/guide-d3js-react/]
 * [https://blog.logrocket.com/getting-started-d3-js-react/]
@@ -16,7 +18,7 @@ So to start, we should have a VizHub project that we want to make a standalone d
 * Resizing
 * Interactivity
 
-I’m going to start with @curran’s Interactive Color Legend scatter plot:
+I’m going to start with Kurran Kelleher’s (@curran) Interactive Color Legend scatter plot - I'm going to shamelessly steal/copy code from this Viz just to show how we can get it working.
 [https://vizhub.com/curran/a446f43c024a49608f7ae418cde946a2]
 
 We will use the following tools to get going:
@@ -392,3 +394,96 @@ VizHub hosts your Viz inside of a iframe that allows the SVG to be statically si
 ```
 
 That also means that our sizing doesn't scale automatically.  We could host our SVG inside of an iframe like VizHub, but I didn't want to do down that path.  There will be some required updates of course, but this gets you started.
+
+## Publishing our results
+
+This is great!  We now have our system running in dev mode, and we can look at our Viz - which really hasn't needed too many changes yet.  The next thing we need to do is publish our visualization somewhere.  We're going to use GitHub Pages for this.
+
+We're going to use the ```gh-pages``` module to publish to our github location, and support getting to our URL via the GitHub pages feature.
+
+First, lets install the module:
+
+```console
+# npm install gh-pages
+```
+
+We will see that in our ```package.json``` file, that we now have:
+
+```json
+    "gh-pages": "^6.2.0",
+```
+
+Great!  But it doesn't do anything yet.  Now we need to add a predeploy and deploy step to our package.json, in the scripts section:
+
+```json
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
+```
+
+This means that when we do an ```npm run deploy``` it will first build our pages (vite puts the built system in the ```dist``` folder), and then we will run the gh-pages plugin, pointing it at the dist directory.
+
+Let's try it:
+
+```console
+% npm run deploy
+
+> vizhub-to-vite@0.0.0 predeploy
+> npm run build
+
+
+> vizhub-to-vite@0.0.0 build
+> vite build
+
+vite v5.4.11 building for production...
+✓ 601 modules transformed.
+dist/index.html                   0.46 kB │ gzip:  0.29 kB
+dist/assets/index-kQJbKSsj.css    0.92 kB │ gzip:  0.50 kB
+dist/assets/index-Dl4wMc81.js   200.30 kB │ gzip: 65.79 kB
+✓ built in 572ms
+
+> vizhub-to-vite@0.0.0 deploy
+> gh-pages -d dist
+
+Published
+```
+
+Ok.  Lets go over to our github pages URL and see what happens.  It looks like a blank page.  Lets look at the console...
+
+```console
+GET https://milepore.github.io/assets/index-kQJbKSsj.css net::ERR_ABORTED 404 (Not Found)
+vizhub-to-vite/:8 
+        
+        
+GET https://milepore.github.io/assets/index-Dl4wMc81.js net::ERR_ABORTED 404 (Not Found)
+```
+
+So it looks like we're going to the root of our tree, instead of assuming that things exist under the project name's (vizhub-to-vite) URL. Good news, we just have to update the homepage of our application in package.json:
+
+```json
+  "homepage": "https://milepore.github.io/vizhub-to-vite/",
+```
+
+We also need to tell vite that our base path is  ```/vizhub-to-vite/``` in vite.config.js:
+
+```javascript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  base: "/vizhub-to-vite/",
+})
+```
+
+Now let's try publishing again.  ```npm run deploy```
+
+We have to give the cache a little bit of time to refresh (up to 10 minutes), but once we do, we'll see that it works!
+
+## There we go!  We have a VizHub visualization converted over to React and GitHub pages.

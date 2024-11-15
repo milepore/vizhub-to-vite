@@ -304,4 +304,91 @@ We now look like this:
 
 And it works!
 
-The only thing, is that our Viz is the wrong size for the window.  Let's add some logic to handle the resize!
+The only thing, is that our Viz is the wrong size for the window.  Next we'll add logic to handle the resize!
+
+## Handle Window Resize
+
+First thing we're going to do is to compute the size of the SVG based on the size of the window.  In order to do that, we'll create a computeSize method.
+
+```javascript
+function computeSize() {
+    const xMargin = 50;
+    const yMargin = 50;
+    const ratio = 1.92;
+    const maxHeightRatio = .95;
+    const maxWidth = 10000;
+
+    var width = Math.min(window.innerWidth - xMargin, maxWidth);
+    var height = width / 1.92;
+    const maxHeight = Math.min(window.innerHeight - yMargin, window.innerHeight*maxHeightRatio)
+    if (height > maxHeight) {
+        height = maxHeight;
+        width = height * ratio;
+    }
+    return [width, height];
+}
+```
+
+We have a few interesting parameters here.  The first is that, just like VizHub we're using a 1.92 aspect ratio (VizHub's SVG is always 960x500), we also are making sure we have some margins around our Viz.  Those can (of course) be tweaked.  We also have the ability to constrain the heigt to only a percentage of the overall window height.
+
+Right now this is set to take up most of the screen (up to 10000 pixels wide).
+
+We now will need to setup our Viz to call this method.
+
+```javascript
+    const [ width, height ] = computeSize();
+```
+
+But what we'll see is that we only get the window sized right on first load.  So we need to add another hook into the system.  We'll use useEffect for that again - and that means we'll have to store the window size as state:
+
+```javascript
+    const [ windowSize, setWindowSize ] = useState(computeSize())
+    const [ width, height ] = windowSize;
+
+    useEffect(() => {
+        function handleResize() {
+            setWindowSize(computeSize())
+        }
+
+        // Attach the event listener to the window object
+        window.addEventListener('resize', handleResize);
+
+        // Remove the event listener when the component unmounts
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+```
+
+Let's talk through this method.  First, you can see we are storing our window size using useState now.  We are also adding an event listener for resize events to recompute the window size.
+
+It is also important to note that our useEffect hook is returning a function that is called when the component is unhooked.  That removes the window listener (otherwise we have lots of old listeners hanging around each time we redraw this component).
+
+Finally, we have to make sure that our graph drawing refreshes every time that we resize the window.  We can do that by adding ```windowSize``` to our rendering useEffect as a dependency:
+
+```javascript
+   useEffect( () => {
+        const svg = d3.select(ref.current)
+        if (data === null)
+            return;
+
+        svg.call(scatterPlot, { /*...*/ });
+    }, [data, hoveredValue, windowSize]);
+```
+
+Now each time we update the window size, we will redraw the graph.
+
+## One last thing
+
+If you're using this on a system that has a dark color theme, you'll see the background on the SVG is the same as the page background.  We can fix that by adding ```style={{'background-color':'white', 'color' : 'black'}}``` to our SVG.  The style element in react expects a map of style elements...
+
+## Absolute Sizing vs Relative Sizing
+
+VizHub hosts your Viz inside of a iframe that allows the SVG to be statically sized to 960x500.  That means that absolute coordinates work well in VizHub for positioning things (like our colorLegend).  You'll see that the colorLegend doesn't move the way it should when we resize things now.  In order to fix this, we'll have to update the code in Viz.js to make sure that we pass in ratios for our positioning:
+
+```javascript
+            colorLegendX: width - 100,
+            colorLegendY: height - 150,
+```
+
+That also means that our sizing doesn't scale automatically.  We could host our SVG inside of an iframe like VizHub, but I didn't want to do down that path.  There will be some required updates of course, but this gets you started.

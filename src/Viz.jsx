@@ -2,11 +2,26 @@ import * as d3 from "d3";
 import { useRef, useEffect, useState } from "react";
 import { scatterPlot } from "./scatterPlot.js"
 
+function computeSize() {
+    const xMargin = 50;
+    const yMargin = 50;
+    const ratio = 1.92;
+    const maxHeightRatio = .95;
+    const maxWidth = 10000;
+
+    var width = Math.min(window.innerWidth - xMargin, maxWidth);
+    var height = width / 1.92;
+    const maxHeight = Math.min(window.innerHeight - yMargin, window.innerHeight*maxHeightRatio)
+    if (height > maxHeight) {
+        height = maxHeight;
+        width = height * ratio;
+    }
+    return [width, height];
+}
+
 const Viz = () => {
 
     const ref=useRef();
-    const width=900;
-    const height=500;
 
     const processData = (data) => {
         for (const d of data) {
@@ -19,6 +34,24 @@ const Viz = () => {
     }
 
     const [ data, setData ] = useState(null)
+    const [ windowSize, setWindowSize ] = useState(computeSize())
+    const [ width, height ] = windowSize;
+    const scale  = 960 / width;
+
+    useEffect(() => {
+        function handleResize() {
+            setWindowSize(computeSize())
+        }
+
+        // Attach the event listener to the window object
+        window.addEventListener('resize', handleResize);
+
+        // Remove the event listener when the component unmounts
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
     if (data == null) {
         d3.csv("iris.csv").then(function (csvData) {
             const processedData=processData(csvData)
@@ -48,14 +81,14 @@ const Viz = () => {
               bottom: 50,
               left: 50,
             },
-            colorLegendX: 850,
-            colorLegendY: 320,
+            colorLegendX: width - 100,
+            colorLegendY: height - 150,
             setHoveredValue,
             hoveredValue,
           });
-    }, [data, hoveredValue]);
+    }, [data, hoveredValue, windowSize]);
 
-    return <svg width={width} height={height} id="viz" ref={ref} />;
+    return <svg width={width} height={height} id="viz" style={{'background-color':'white', 'color' : 'black'}} ref={ref} />;
 };
 
 export default Viz;
